@@ -31,6 +31,6 @@ class Bzry_Toolbar extends Module
 
     public function hookDisplayAfterBodyOpeningTag()
     {
-        return __METHOD__;
+        return $this->display(__FILE__, 'bzry_toolbar.tpl');
     }
 }
