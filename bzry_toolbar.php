@@ -8,6 +8,11 @@ if (! defined('_PS_VERSION_')) {
 
 class Bzry_Toolbar extends Module
 {
+    /**
+     * @var Employee
+     */
+    private $employee;
+
     public function __construct()
     {
         $this->author                   = 'Bazaarya';
@@ -31,6 +36,41 @@ class Bzry_Toolbar extends Module
 
     public function hookDisplayAfterBodyOpeningTag()
     {
+        if (! Validate::isLoadedObject($this->getEmployee())) {
+            return;
+        }
+
         return $this->display(__FILE__, 'bzry_toolbar.tpl');
+    }
+
+    protected function getEmployee(): Employee
+    {
+        if ($this->employee) {
+            return $this->employee;
+        }
+
+        try {
+
+            $employee = (new Cookie('psAdmin'))->id_employee;
+
+            if (! $employee) {
+                throw new Exception();
+            }
+
+            $employee = new Employee($employee);
+
+            if (! Validate::isLoadedObject($employee)) {
+                throw new Exception();
+            }
+
+            $this->employee = $employee;
+
+        } catch (Exception $e) {
+
+            $this->employee = new Employee();
+
+        }
+
+        return $this->employee;
     }
 }
