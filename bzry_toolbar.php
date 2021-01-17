@@ -63,8 +63,6 @@ class Bzry_Toolbar extends Module
                 throw new Exception();
             }
 
-            dump('hola!');
-
             $this->employee = $employee;
 
         } catch (Exception $e) {
