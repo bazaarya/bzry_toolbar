@@ -22,4 +22,15 @@ class Bzry_Toolbar extends Module
         $this->displayName = $this->l('Bazaarya - Toolbar');
         $this->description = $this->l('Toolbar that speeds up the use of your shop.');
     }
+
+    public function install()
+    {
+        return parent::install()
+            && $this->registerHook('displayAfterBodyOpeningTag');
+    }
+
+    public function hookDisplayAfterBodyOpeningTag()
+    {
+        return $this->display(__FILE__, 'bzry_toolbar.tpl');
+    }
 }
