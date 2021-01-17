@@ -36,14 +36,14 @@ class Bzry_Toolbar extends Module
 
     public function hookDisplayAfterBodyOpeningTag()
     {
-        if (! Validate::isLoadedObject($this->getAdmin())) {
+        if (! Validate::isLoadedObject($this->getEmployee())) {
             return;
         }
 
         return $this->display(__FILE__, 'bzry_toolbar.tpl');
     }
 
-    protected function getAdmin(): Employee
+    protected function getEmployee(): Employee
     {
         if ($this->employee) {
             return $this->employee;
