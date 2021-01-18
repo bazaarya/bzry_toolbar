@@ -10,6 +10,8 @@ class Bzry_Toolbar extends Module
 {
     const COOKIE_NAME = 'bzry_toolbar_admin_url';
 
+    const PREFIX = 'bzry_toolbar_';
+
     /**
      * @var string
      */
@@ -49,6 +51,7 @@ class Bzry_Toolbar extends Module
         return $this->cookie = new Cookie('psAdmin');
     }
 
+    /** @todo Añadir Token */
     protected function getAdminURL(): string
     {
         if ($this->admin_url) {
@@ -109,6 +112,10 @@ class Bzry_Toolbar extends Module
         if (! Validate::isLoadedObject($this->getEmployee())) {
             return null;
         }
+
+        $this->smarty->assign([
+            self::PREFIX . 'dashboard' => $this->getAdminURL(),
+        ]);
 
         return $this->display(__FILE__, 'bzry_toolbar.tpl');
     }
