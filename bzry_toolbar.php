@@ -8,14 +8,14 @@ if (! defined('_PS_VERSION_')) {
 
 class Bzry_Toolbar extends Module
 {
-    const COOKIE_NAME = 'bzry_toolbar_admin_url';
+    const COOKIE_NAME = 'bzry_toolbar_urls';
 
     const PREFIX = 'bzry_toolbar_';
 
     /**
-     * @var string
+     * @var array
      */
-    private $admin_url;
+    private $urls;
 
     /**
      * @var Cookie
@@ -48,29 +48,28 @@ class Bzry_Toolbar extends Module
             return $this->cookie;
         }
 
-        return $this->cookie = new Cookie('psAdmin');
+        return $this->cookie = defined('_PS_ADMIN_DIR_')
+            ? $this->context->cookie
+            : new Cookie('psAdmin');
     }
 
-    /** @todo Añadir Token */
-    protected function getAdminURL(): string
+    protected function getAdminURLs(): array
     {
-        if ($this->admin_url) {
-            return $this->admin_url;
+        if ($this->urls) {
+            return $this->urls;
         }
 
         $cookie = $this->getAdminCookie()->{self::COOKIE_NAME} ?? false;
 
         if ($cookie) {
-            return $this->admin_url = $cookie;
+            return $this->urls = json_decode($cookie, true);
         }
 
-        $this->admin_url = Context::getContext()->shop->getBaseURL(true);
-
-        if (defined('_PS_ADMIN_DIR_')) {
-            $this->admin_url .= basename(_PS_ADMIN_DIR_);
-        }
-
-        return $this->admin_url;
+        return $this->urls = [
+            'dashboard' => $this->context->link->getAdminLink('AdminDashboard'),
+            'orders'    => $this->context->link->getAdminLink('AdminOrders'),
+            'customers' => $this->context->link->getAdminLink('AdminCustomers'),
+        ];
     }
 
     protected function getEmployee(): Employee
@@ -104,7 +103,7 @@ class Bzry_Toolbar extends Module
 
     public function hookActionAdminLoginControllerLoginAfter(array $params): void
     {
-        $this->storeAdminURL();
+        $this->storeAdminURLs();
     }
 
     public function hookDisplayAfterBodyOpeningTag(): ?string
@@ -114,7 +113,9 @@ class Bzry_Toolbar extends Module
         }
 
         $this->smarty->assign([
-            self::PREFIX . 'dashboard' => $this->getAdminURL(),
+            self::PREFIX . 'dashboard' => $this->getAdminURLs()['dashboard'],
+            self::PREFIX . 'orders' => $this->getAdminURLs()['orders'],
+            self::PREFIX . 'customers' => $this->getAdminURLs()['customers'],
         ]);
 
         return $this->display(__FILE__, 'bzry_toolbar.tpl');
@@ -130,18 +131,18 @@ class Bzry_Toolbar extends Module
             return false;
         }
 
-        $this->storeAdminURL();
+        $this->storeAdminURLs();
 
         return true;
     }
 
-    protected function storeAdminURL(): void
+    protected function storeAdminURLs(): void
     {
         if (!defined('_PS_ADMIN_DIR_')) {
             return;
         }
 
-        $this->getAdminCookie()->{self::COOKIE_NAME} = $this->getAdminURL();
+        $this->getAdminCookie()->{self::COOKIE_NAME} = json_encode($this->getAdminURLs());
         $this->getAdminCookie()->write();
     }
 }
