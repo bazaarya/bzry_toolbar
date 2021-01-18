@@ -115,7 +115,7 @@ class Bzry_Toolbar extends Module
         $this->smarty->assign([
             self::PREFIX . 'dashboard' => $this->getAdminURLs()['dashboard'],
             self::PREFIX . 'orders' => $this->getAdminURLs()['orders'],
-            self::PREFIX . 'customer' => $this->getAdminURLs()['customers'],
+            self::PREFIX . 'customers' => $this->getAdminURLs()['customers'],
         ]);
 
         return $this->display(__FILE__, 'bzry_toolbar.tpl');
