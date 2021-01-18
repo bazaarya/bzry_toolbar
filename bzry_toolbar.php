@@ -40,21 +40,6 @@ class Bzry_Toolbar extends Module
         $this->description = $this->l('Toolbar that speeds up the use of your shop.');
     }
 
-    public function install(): bool
-    {
-        $success = parent::install()
-            && $this->registerHook('actionAdminLoginControllerLoginAfter')
-            && $this->registerHook('displayAfterBodyOpeningTag');
-
-        if (!$success) {
-            return false;
-        }
-
-        $this->storeAdminURL();
-
-        return true;
-    }
-
     protected function getAdminCookie(): Cookie
     {
         if ($this->cookie) {
@@ -85,19 +70,38 @@ class Bzry_Toolbar extends Module
         return $this->admin_url;
     }
 
-    public function hookActionAdminLoginControllerLoginAfter(array $params)
+    protected function getEmployee(): Employee
     {
-        $this->storeAdminURL();
-    }
-
-    protected function storeAdminURL(): void
-    {
-        if (!defined('_PS_ADMIN_DIR_')) {
-            return;
+        if ($this->employee) {
+            return $this->employee;
         }
 
-        $this->getAdminCookie()->{self::COOKIE_NAME} = $this->getAdminURL();
-        $this->getAdminCookie()->write();
+        try {
+
+            $employee = $this->getAdminCookie()->id_employee;
+
+            if (!$employee) {
+                throw new Exception();
+            }
+
+            $employee = new Employee($employee);
+
+            if (!Validate::isLoadedObject($employee)) {
+                throw new Exception();
+            }
+
+            $this->employee = $employee;
+        } catch (Exception $e) {
+
+            $this->employee = new Employee();
+        }
+
+        return $this->employee;
+    }
+
+    public function hookActionAdminLoginControllerLoginAfter(array $params): void
+    {
+        $this->storeAdminURL();
     }
 
     public function hookDisplayAfterBodyOpeningTag(): ?string
@@ -109,34 +113,28 @@ class Bzry_Toolbar extends Module
         return $this->display(__FILE__, 'bzry_toolbar.tpl');
     }
 
-    protected function getEmployee(): Employee
+    public function install(): bool
     {
-        if ($this->employee) {
-            return $this->employee;
+        $success = parent::install()
+            && $this->registerHook('actionAdminLoginControllerLoginAfter')
+            && $this->registerHook('displayAfterBodyOpeningTag');
+
+        if (!$success) {
+            return false;
         }
 
-        try {
+        $this->storeAdminURL();
 
-            $employee = $this->getAdminCookie()->id_employee;
+        return true;
+    }
 
-            if (! $employee) {
-                throw new Exception();
-            }
-
-            $employee = new Employee($employee);
-
-            if (! Validate::isLoadedObject($employee)) {
-                throw new Exception();
-            }
-
-            $this->employee = $employee;
-
-        } catch (Exception $e) {
-
-            $this->employee = new Employee();
-
+    protected function storeAdminURL(): void
+    {
+        if (!defined('_PS_ADMIN_DIR_')) {
+            return;
         }
 
-        return $this->employee;
+        $this->getAdminCookie()->{self::COOKIE_NAME} = $this->getAdminURL();
+        $this->getAdminCookie()->write();
     }
 }
