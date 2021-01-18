@@ -8,6 +8,20 @@ if (! defined('_PS_VERSION_')) {
 
 class Bzry_Toolbar extends Module
 {
+    const COOKIE_NAME = 'bzry_toolbar_admin_url';
+
+    const PREFIX = 'bzry_toolbar_';
+
+    /**
+     * @var string
+     */
+    private $admin_url;
+
+    /**
+     * @var Cookie
+     */
+    private $cookie;
+
     /**
      * @var Employee
      */
@@ -28,19 +42,35 @@ class Bzry_Toolbar extends Module
         $this->description = $this->l('Toolbar that speeds up the use of your shop.');
     }
 
-    public function install()
+    protected function getAdminCookie(): Cookie
     {
-        return parent::install()
-            && $this->registerHook('displayAfterBodyOpeningTag');
-    }
-
-    public function hookDisplayAfterBodyOpeningTag()
-    {
-        if (! Validate::isLoadedObject($this->getEmployee())) {
-            return;
+        if ($this->cookie) {
+            return $this->cookie;
         }
 
-        return $this->display(__FILE__, 'bzry_toolbar.tpl');
+        return $this->cookie = new Cookie('psAdmin');
+    }
+
+    /** @todo Añadir Token */
+    protected function getAdminURL(): string
+    {
+        if ($this->admin_url) {
+            return $this->admin_url;
+        }
+
+        $cookie = $this->getAdminCookie()->{self::COOKIE_NAME} ?? false;
+
+        if ($cookie) {
+            return $this->admin_url = $cookie;
+        }
+
+        $this->admin_url = Context::getContext()->shop->getBaseURL(true);
+
+        if (defined('_PS_ADMIN_DIR_')) {
+            $this->admin_url .= basename(_PS_ADMIN_DIR_);
+        }
+
+        return $this->admin_url;
     }
 
     protected function getEmployee(): Employee
@@ -51,26 +81,67 @@ class Bzry_Toolbar extends Module
 
         try {
 
-            $employee = (new Cookie('psAdmin'))->id_employee;
+            $employee = $this->getAdminCookie()->id_employee;
 
-            if (! $employee) {
+            if (!$employee) {
                 throw new Exception();
             }
 
             $employee = new Employee($employee);
 
-            if (! Validate::isLoadedObject($employee)) {
+            if (!Validate::isLoadedObject($employee)) {
                 throw new Exception();
             }
 
             $this->employee = $employee;
-
         } catch (Exception $e) {
 
             $this->employee = new Employee();
-
         }
 
         return $this->employee;
+    }
+
+    public function hookActionAdminLoginControllerLoginAfter(array $params): void
+    {
+        $this->storeAdminURL();
+    }
+
+    public function hookDisplayAfterBodyOpeningTag(): ?string
+    {
+        if (! Validate::isLoadedObject($this->getEmployee())) {
+            return null;
+        }
+
+        $this->smarty->assign([
+            self::PREFIX . 'dashboard' => $this->getAdminURL(),
+        ]);
+
+        return $this->display(__FILE__, 'bzry_toolbar.tpl');
+    }
+
+    public function install(): bool
+    {
+        $success = parent::install()
+            && $this->registerHook('actionAdminLoginControllerLoginAfter')
+            && $this->registerHook('displayAfterBodyOpeningTag');
+
+        if (!$success) {
+            return false;
+        }
+
+        $this->storeAdminURL();
+
+        return true;
+    }
+
+    protected function storeAdminURL(): void
+    {
+        if (!defined('_PS_ADMIN_DIR_')) {
+            return;
+        }
+
+        $this->getAdminCookie()->{self::COOKIE_NAME} = $this->getAdminURL();
+        $this->getAdminCookie()->write();
     }
 }
