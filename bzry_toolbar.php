@@ -8,6 +8,18 @@ if (! defined('_PS_VERSION_')) {
 
 class Bzry_Toolbar extends Module
 {
+    const COOKIE_NAME = 'bzry_toolbar_admin_url';
+
+    /**
+     * @var string
+     */
+    private $admin_url;
+
+    /**
+     * @var Cookie
+     */
+    private $cookie;
+
     /**
      * @var Employee
      */
@@ -28,16 +40,70 @@ class Bzry_Toolbar extends Module
         $this->description = $this->l('Toolbar that speeds up the use of your shop.');
     }
 
-    public function install()
+    public function install(): bool
     {
-        return parent::install()
+        $success = parent::install()
+            && $this->registerHook('actionAdminLoginControllerLoginAfter')
             && $this->registerHook('displayAfterBodyOpeningTag');
+
+        if (!$success) {
+            return false;
+        }
+
+        $this->storeAdminURL();
+
+        return true;
     }
 
-    public function hookDisplayAfterBodyOpeningTag()
+    protected function getAdminCookie(): Cookie
+    {
+        if ($this->cookie) {
+            return $this->cookie;
+        }
+
+        return $this->cookie = new Cookie('psAdmin');
+    }
+
+    protected function getAdminURL(): string
+    {
+        if ($this->admin_url) {
+            return $this->admin_url;
+        }
+
+        $cookie = $this->getAdminCookie()->{self::COOKIE_NAME} ?? false;
+
+        if ($cookie) {
+            return $this->admin_url = $cookie;
+        }
+
+        $this->admin_url = Context::getContext()->shop->getBaseURL(true);
+
+        if (defined('_PS_ADMIN_DIR_')) {
+            $this->admin_url .= basename(_PS_ADMIN_DIR_);
+        }
+
+        return $this->admin_url;
+    }
+
+    public function hookActionAdminLoginControllerLoginAfter(array $params)
+    {
+        $this->storeAdminURL();
+    }
+
+    protected function storeAdminURL(): void
+    {
+        if (!defined('_PS_ADMIN_DIR_')) {
+            return;
+        }
+
+        $this->getAdminCookie()->{self::COOKIE_NAME} = $this->getAdminURL();
+        $this->getAdminCookie()->write();
+    }
+
+    public function hookDisplayAfterBodyOpeningTag(): ?string
     {
         if (! Validate::isLoadedObject($this->getEmployee())) {
-            return;
+            return null;
         }
 
         return $this->display(__FILE__, 'bzry_toolbar.tpl');
@@ -51,7 +117,7 @@ class Bzry_Toolbar extends Module
 
         try {
 
-            $employee = (new Cookie('psAdmin'))->id_employee;
+            $employee = $this->getAdminCookie()->id_employee;
 
             if (! $employee) {
                 throw new Exception();
