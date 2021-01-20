@@ -1,0 +1,10 @@
+{
+    "name": "bazaarya/bzry_toolbar",
+    "homepage": "https://bazaarya.io",
+    "version": "0.0",
+    "autoload": {
+        "psr-4": {
+            "Bazaarya\\Toolbar\\": "src/"
+        }
+    }
+}
