@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bazaarya\Toolbar;
 
+use Context;
 use Cookie;
 
 class Biscuit
@@ -17,6 +18,10 @@ class Biscuit
 
     public function get(): Cookie
     {
+        if (defined('_PS_ADMIN_DIR_')) {
+            return Context::getContext()->cookie;
+        }
+
         if ($this->cookie instanceof Cookie) {
             return $this->cookie;
         }
