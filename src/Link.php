@@ -7,13 +7,10 @@ namespace Bazaarya\Toolbar;
 use Bazaarya\Toolbar\Exception\ActionNotAllowedException;
 use Bazaarya\Toolbar\Exception\IsFrontException;
 use Context;
-use Cookie;
 use Exception;
 
 class Link
 {
-    const COOKIE_NAME = 'bzry_toolbar';
-
     const ACTIONS = [
         'edit'  => 'update',
         'index' => false,
@@ -23,6 +20,16 @@ class Link
         'customers',
         'orders',
     ];
+
+    /**
+     * @var Biscuit
+     */
+    private $cookie;
+
+    public function __construct()
+    {
+        $this->cookie = new Biscuit();
+    }
 
     public function bootstrap(): void
     {
@@ -51,7 +58,7 @@ class Link
             }
         }
 
-        $this->storeCookie($links);
+        $this->cookie->store($links);
     }
 
     public function get(string $controller, int $id = 0, string $action = 'index'): string
@@ -69,7 +76,7 @@ class Link
             "{$controller}/{$id}?",
         ];
 
-        $link = $this->retrieveCookie();
+        $link = $this->cookie->retrieve();
 
         try {
 
@@ -143,17 +150,6 @@ class Link
         return $controller;
     }
 
-    protected function getCookie(): Cookie
-    {
-        static $cookie;
-
-        if ($cookie instanceof Cookie) {
-            return $cookie;
-        }
-
-        return $cookie = new Cookie('psAdmin');
-    }
-
     protected function isBackOffice(): bool
     {
         if (!defined('_PS_ADMIN_DIR_')) {
@@ -161,20 +157,6 @@ class Link
         }
 
         return true;
-    }
-
-    protected function retrieveCookie(): array
-    {
-        $links = (string) $this->getCookie()->{self::COOKIE_NAME};
-        $links = json_decode($links, true);
-
-        return (array) $links;
-    }
-
-    protected function storeCookie(array $links): void
-    {
-        $this->getCookie()->{self::COOKIE_NAME} = json_encode($links);
-        $this->getCookie()->write();
     }
 
     protected function toSingle(string $object): string
