@@ -128,7 +128,7 @@ class Bzry_Toolbar extends Module
             return false;
         }
 
-        $this->storeAdminURLs();
+        $this->getLink()->bootstrap();
 
         return true;
     }
