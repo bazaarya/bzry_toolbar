@@ -18,6 +18,7 @@ class Link
 
     const ONLY_VIEW = [
         'customers',
+        'dashboard',
         'orders',
     ];
 
