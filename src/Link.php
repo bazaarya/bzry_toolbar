@@ -7,10 +7,12 @@ namespace Bazaarya\Toolbar;
 use Bazaarya\Toolbar\Exception\ActionNotAllowedException;
 use Bazaarya\Toolbar\Exception\IsFrontException;
 use Context;
-use Emarketing\Action\Products;
+use Cookie;
 
 class Link
 {
+    const COOKIE_NAME = 'bzry_toolbar';
+
     const ACTIONS = [
         'edit'  => 'update',
         'index' => false,
@@ -23,6 +25,32 @@ class Link
 
     public function bootstrap(): void
     {
+        if (!$this->isBackOffice()) {
+            throw new IsFrontException();
+        }
+
+        $links = [
+            'orders'    => null,
+            'customers' => null,
+            'categories'  => [
+                'index' => null,
+                'edit'  => null,
+            ],
+        ];
+
+        foreach ($links as $controller => &$actions) {
+
+            if (!$actions) {
+                $actions = $this->generate($controller, 'index');
+                continue;
+            }
+
+            foreach ($actions as $action => &$link) {
+                $link = $this->generate($controller, $action);
+            }
+        }
+
+        $this->storeCookie($links);
     }
 
     public function create(string $controller, int $id, string $action): string
@@ -52,7 +80,7 @@ class Link
 
     protected function generate(string $controller, string $action): string
     {
-        if (!defined('_PS_ADMIN_DIR_')) {
+        if (!$this->isBackOffice()) {
             throw new IsFrontException();
         }
 
@@ -95,6 +123,40 @@ class Link
         $controller = "Admin{$controller}";
 
         return $controller;
+    }
+
+    protected function getCookie(): Cookie
+    {
+        static $cookie;
+
+        if ($cookie instanceof Cookie) {
+            return $cookie;
+        }
+
+        return $cookie = Context::getContext()->cookie;
+    }
+
+    protected function isBackOffice(): bool
+    {
+        if (!defined('_PS_ADMIN_DIR_')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function retrieveCookie(): array
+    {
+        $links = (string) $this->getCookie()->{self::COOKIE_NAME};
+        $links = json_decode($links, true);
+
+        return (array) $links;
+    }
+
+    protected function storeCookie(array $links): void
+    {
+        $this->getCookie()->{self::COOKIE_NAME} = json_encode($links);
+        $this->getCookie()->write();
     }
 
     protected function toSingle(string $object): string
