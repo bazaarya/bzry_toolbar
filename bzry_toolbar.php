@@ -2,30 +2,30 @@
 
 declare(strict_types=1);
 
-if (! defined('_PS_VERSION_')) {
+use Bazaarya\Toolbar\Biscuit;
+use Bazaarya\Toolbar\Exception\NoEmployeeException;
+use Bazaarya\Toolbar\Link;
+
+if (!defined('_PS_VERSION_')) {
     exit;
 }
 
 class Bzry_Toolbar extends Module
 {
-    const COOKIE_NAME = 'bzry_toolbar_urls';
-
-    const PREFIX = 'bzry_toolbar_';
-
     /**
-     * @var array
+     * @var Biscuit
      */
-    private $urls;
-
-    /**
-     * @var Cookie
-     */
-    private $cookie;
+    private $biscuit;
 
     /**
      * @var Employee
      */
     private $employee;
+
+    /**
+     * @var Link
+     */
+    private $link;
 
     public function __construct()
     {
@@ -40,36 +40,9 @@ class Bzry_Toolbar extends Module
 
         $this->displayName = $this->l('Bazaarya - Toolbar');
         $this->description = $this->l('Toolbar that speeds up the use of your shop.');
-    }
 
-    protected function getAdminCookie(): Cookie
-    {
-        if ($this->cookie) {
-            return $this->cookie;
-        }
-
-        return $this->cookie = defined('_PS_ADMIN_DIR_')
-            ? $this->context->cookie
-            : new Cookie('psAdmin');
-    }
-
-    protected function getAdminURLs(): array
-    {
-        if ($this->urls) {
-            return $this->urls;
-        }
-
-        $cookie = $this->getAdminCookie()->{self::COOKIE_NAME} ?? false;
-
-        if ($cookie) {
-            return $this->urls = json_decode($cookie, true);
-        }
-
-        return $this->urls = [
-            'dashboard' => $this->context->link->getAdminLink('AdminDashboard'),
-            'orders'    => $this->context->link->getAdminLink('AdminOrders'),
-            'customers' => $this->context->link->getAdminLink('AdminCustomers'),
-        ];
+        // Composer
+        require_once __DIR__ . '/vendor/autoload.php';
     }
 
     protected function getEmployee(): Employee
@@ -80,20 +53,20 @@ class Bzry_Toolbar extends Module
 
         try {
 
-            $employee = $this->getAdminCookie()->id_employee;
+            $employee = $this->getBiscuit()->get()->id_employee;
 
             if (!$employee) {
-                throw new Exception();
+                throw new NoEmployeeException();
             }
 
             $employee = new Employee($employee);
 
             if (!Validate::isLoadedObject($employee)) {
-                throw new Exception();
+                throw new NoEmployeeException();
             }
 
             $this->employee = $employee;
-        } catch (Exception $e) {
+        } catch (NoEmployeeException $e) {
 
             $this->employee = new Employee();
         }
@@ -101,22 +74,46 @@ class Bzry_Toolbar extends Module
         return $this->employee;
     }
 
+    protected function getBiscuit(): Biscuit
+    {
+        if ($this->biscuit instanceof Biscuit) {
+            return $this->biscuit;
+        }
+
+        return $this->biscuit = new Biscuit();
+    }
+
+    protected function getLink(): Link
+    {
+        if ($this->link instanceof Link) {
+            return $this->link;
+        }
+
+        return $this->link = new Link();
+    }
+
     public function hookActionAdminLoginControllerLoginAfter(array $params): void
     {
-        $this->storeAdminURLs();
+        $this->getLink()->bootstrap();
     }
 
     public function hookDisplayAfterBodyOpeningTag(): ?string
     {
-        if (! Validate::isLoadedObject($this->getEmployee())) {
+        if (!Validate::isLoadedObject($this->getEmployee())) {
             return null;
         }
 
-        $this->smarty->assign([
-            self::PREFIX . 'dashboard' => $this->getAdminURLs()['dashboard'],
-            self::PREFIX . 'orders' => $this->getAdminURLs()['orders'],
-            self::PREFIX . 'customers' => $this->getAdminURLs()['customers'],
-        ]);
+        $links = [
+            'dashboard' => null,
+            'orders'    => null,
+            'customers' => null,
+        ];
+
+        foreach ($links as $controller => &$link) {
+            $link = $this->getLink()->get($controller);
+        }
+
+        $this->smarty->assign($this->name, $links);
 
         return $this->display(__FILE__, 'bzry_toolbar.tpl');
     }
@@ -134,15 +131,5 @@ class Bzry_Toolbar extends Module
         $this->storeAdminURLs();
 
         return true;
-    }
-
-    protected function storeAdminURLs(): void
-    {
-        if (!defined('_PS_ADMIN_DIR_')) {
-            return;
-        }
-
-        $this->getAdminCookie()->{self::COOKIE_NAME} = json_encode($this->getAdminURLs());
-        $this->getAdminCookie()->write();
     }
 }

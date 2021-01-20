@@ -15,7 +15,7 @@ class Biscuit
      */
     private $cookie;
 
-    protected function get(): Cookie
+    public function get(): Cookie
     {
         if ($this->cookie instanceof Cookie) {
             return $this->cookie;

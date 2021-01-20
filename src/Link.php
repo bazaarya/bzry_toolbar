@@ -38,12 +38,13 @@ class Link
         }
 
         $links = [
-            'orders'    => null,
-            'customers' => null,
+            'dashboard' => null,
             'categories'  => [
-                'index' => null,
                 'edit'  => null,
+                'index' => null,
             ],
+            'customers' => null,
+            'orders'    => null,
         ];
 
         foreach ($links as $controller => &$actions) {
