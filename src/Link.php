@@ -8,6 +8,7 @@ use Bazaarya\Toolbar\Exception\ActionNotAllowedException;
 use Bazaarya\Toolbar\Exception\IsFrontException;
 use Context;
 use Cookie;
+use Exception;
 
 class Link
 {
@@ -53,7 +54,7 @@ class Link
         $this->storeCookie($links);
     }
 
-    public function create(string $controller, int $id, string $action): string
+    public function get(string $controller, int $id = 0, string $action = 'index'): string
     {
         $controller = strtolower($controller);
         $id         = abs($id);
@@ -68,12 +69,29 @@ class Link
             "{$controller}/{$id}?",
         ];
 
-        /**
-         * @todo Obtener de la Cookie.
-         */
-        $link = $this->generate($controller, $action);
+        $link = $this->retrieveCookie();
 
-        $link = preg_replace($pattern, $replace, $link, 1);
+        try {
+
+            $link = $link[$controller] ?? false;
+
+            if (!$link) {
+                throw new Exception();
+            }
+
+            if (is_array($link)) {
+                $link = $link[$action] ?? false;
+            }
+
+            if (!$link) {
+                throw new Exception();
+            }
+
+            $link = preg_replace($pattern, $replace, $link, 1);
+        } catch (Exception $e) {
+
+            $link = '';
+        }
 
         return $link;
     }
@@ -133,7 +151,7 @@ class Link
             return $cookie;
         }
 
-        return $cookie = Context::getContext()->cookie;
+        return $cookie = new Cookie('psAdmin');
     }
 
     protected function isBackOffice(): bool
