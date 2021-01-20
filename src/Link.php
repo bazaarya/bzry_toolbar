@@ -24,11 +24,11 @@ class Link
     /**
      * @var Biscuit
      */
-    private $cookie;
+    private $biscuit;
 
     public function __construct()
     {
-        $this->cookie = new Biscuit();
+        $this->biscuit = new Biscuit();
     }
 
     public function bootstrap(): void
@@ -58,7 +58,7 @@ class Link
             }
         }
 
-        $this->cookie->store($links);
+        $this->biscuit->store($links);
     }
 
     public function get(string $controller, int $id = 0, string $action = 'index'): string
@@ -76,7 +76,7 @@ class Link
             "{$controller}/{$id}?",
         ];
 
-        $link = $this->cookie->retrieve();
+        $link = $this->biscuit->retrieve();
 
         try {
 
